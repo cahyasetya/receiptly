@@ -56,9 +56,9 @@ class _CategoryChartState extends State<CategoryChart> {
               ),
             ),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
+          Offstage(
+            offstage: !_expanded,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 children: [
@@ -68,8 +68,6 @@ class _CategoryChartState extends State<CategoryChart> {
                 ],
               ),
             ),
-            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
           ),
         ],
       ),

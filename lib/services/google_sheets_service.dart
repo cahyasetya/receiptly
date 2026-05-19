@@ -37,10 +37,7 @@ class GoogleSheetsService {
       final future = GoogleSignIn.instance.attemptLightweightAuthentication();
       if (future == null) return;
       final account = await future;
-      if (account == null) return;
-      // Silently authorize scopes — if user previously granted, no UI shown
-      final authz = await account.authorizationClient.authorizationForScopes(_scopes);
-      if (authz != null) {
+      if (account != null) {
         _account = account;
         _log.info('Session restored: ${account.email}');
       }

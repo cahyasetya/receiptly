@@ -44,9 +44,9 @@ class _BudgetProgressState extends State<BudgetProgress> {
               ),
             ),
           ),
-          AnimatedCrossFade(
-            firstChild: const SizedBox.shrink(),
-            secondChild: Padding(
+          Offstage(
+            offstage: !_expanded,
+            child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 children: withBudget.map((cat) {
@@ -87,8 +87,6 @@ class _BudgetProgressState extends State<BudgetProgress> {
                 }).toList(),
               ),
             ),
-            crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-            duration: const Duration(milliseconds: 200),
           ),
         ],
       ),
