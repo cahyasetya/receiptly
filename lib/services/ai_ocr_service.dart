@@ -138,11 +138,21 @@ Rules:
 3. "price" must be a number (integer or float). Convert Indonesian format (e.g., "15.000" -> 15000).
 4. For "summary" type, set each item's price to 0 and use "total" for the grand total.
 5. "category" must be one of the available categories listed above.
-6. "total" is the grand total of the receipt.
+6. "total" is the grand total printed on the receipt. This includes all fees and taxes.
 7. Ignore headers, footers, dates, and "Thank You" messages.
 8. If the receipt is in Indonesian, keep the item names in Indonesian.
 9. Do NOT return markdown code blocks (like ```json). Return raw JSON only.
 10. If no items are found, return {"type": "summary", "items": [], "total": 0}.
+11. IMPORTANT — Exclude these from "items" (they are NOT products):
+    - Pajak / Tax / PPN / PPnBM
+    - Ongkos kirim / Shipping fee / Delivery fee
+    - Biaya layanan / Service charge / Service fee
+    - Biaya platform / Platform fee / Admin fee
+    - Diskon / Discount / Potongan harga
+    - Kembalian / Change due
+    - Any other fee or charge that is not a physical product or service
+    These are part of the receipt total but should NOT appear as items.
+12. For "total", use the grand total AFTER all fees, taxes, and discounts are applied (the final amount paid).
 ''';
 
       // Build request body
