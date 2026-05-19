@@ -55,12 +55,12 @@ class _SyncScreenState extends State<SyncScreen> {
 
   Future<void> _openSpreadsheet() async {
     final uri = Uri.parse('https://docs.google.com/spreadsheets/d/$_spreadsheetId');
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
+    try {
+      await launchUrl(uri, mode: LaunchMode.platformDefault);
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tidak bisa membuka browser')),
+          SnackBar(content: Text('Tidak bisa membuka browser: $e')),
         );
       }
     }
