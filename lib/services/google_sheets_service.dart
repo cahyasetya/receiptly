@@ -182,6 +182,9 @@ class GoogleSheetsService {
       sid = await _getOrCreateSpreadsheet(sheets, driveApi);
     }
 
+    // Always ensure headers are up to date
+    await _initSheets(sheets, sid);
+
     final expenses = await repository.getAllExpenses();
     final categories = await repository.getCategories();
 
