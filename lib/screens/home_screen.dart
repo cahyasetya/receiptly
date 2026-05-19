@@ -289,42 +289,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
-                    if (_expenses.isNotEmpty)
-                      CategoryChart(
-                        expenses: _expenses,
-                        categories: _categories,
-                      ),
-                    if (_expenses.isNotEmpty && _categories.any((c) => c.hasBudget))
-                      BudgetProgress(
-                        expenses: _expenses,
-                        categories: _categories,
-                      ),
-                    if (_expenses.isEmpty)
-                      EmptyState(
-                        icon: _selectedPeriod == _Period.allTime ? Icons.receipt_long : Icons.search_off,
-                        title: _selectedPeriod == _Period.allTime ? 'Belum ada pengeluaran' : 'Tidak ada pengeluaran',
-                        subtitle: _selectedPeriod == _Period.allTime
-                            ? 'Tekan tombol di bawah untuk menambahkan nota pertama'
-                            : 'Tidak ada pengeluaran di periode ini',
-                      )
-                    else
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 100),
-                        itemCount: _expenses.length,
-                        itemBuilder: (context, index) {
-                          final expense = _expenses[index];
-                          return ExpenseCard(
-                            expense: expense,
-                            onDelete: () => _deleteExpense(expense.id!),
-                          );
-                        },
-                      ),
                   ],
                 ),
               ),
-                    ),
+            ),
 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddExpense,
