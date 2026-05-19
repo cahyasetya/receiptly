@@ -5,6 +5,7 @@ import 'screens/home_screen.dart';
 import 'screens/ocr_screen.dart';
 import 'services/expense_repository.dart';
 import 'services/share_handler.dart';
+import 'services/google_sheets_service.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -23,6 +24,9 @@ void main() async {
     _handlePendingShare();
   };
   await shareHandler.init();
+
+  // Init Google Sign-In (restores session silently if previously signed in)
+  await GoogleSheetsService().initialize();
 
   runApp(const ReceiptlyApp());
 }

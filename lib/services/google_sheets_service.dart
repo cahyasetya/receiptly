@@ -27,6 +27,23 @@ class GoogleSheetsService {
     await GoogleSignIn.instance.initialize(
       serverClientId: webClientId.isNotEmpty ? webClientId : null,
     );
+    // Silently restore previous session
+    await _tryRestoreSession();
+  }
+
+  /// Try to restore the previous session without showing UI.
+  Future<void> _tryRestoreSession() async {
+    try {
+      final future = GoogleSignIn.instance.attemptLightweightAuthentication();
+      if (future == null) return;
+      final account = await future;
+      if (account != null) {
+        _account = account;
+        _log.info('Session restored: ${account.email}');
+      }
+    } catch (e) {
+      _log.info('No previous session: $e');
+    }
   }
 
   Future<GoogleSignInAccount?> signIn() async {

@@ -21,7 +21,6 @@ class _SyncScreenState extends State<SyncScreen> {
   @override
   void initState() {
     super.initState();
-    _sheetsService.initialize();
     _loadSheetId();
   }
 
