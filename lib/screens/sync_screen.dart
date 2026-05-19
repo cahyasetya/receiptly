@@ -78,6 +78,36 @@ class _SyncScreenState extends State<SyncScreen> {
     }
   }
 
+  Future<void> _restore() async {
+    if (_spreadsheetId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Masukkan ID spreadsheet'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore Data'),
+        content: const Text('Data dari sheet akan ditambahkan ke database lokal. Data dengan ID yang sama akan dilewati. Lanjutkan?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Restore')),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    setState(() { _isSyncing = true; _status = 'Merestore...'; _lastSuccess = null; });
+    try {
+      await _sheetsService.restoreFromSheet(_spreadsheetId, widget.repository);
+      setState(() { _isSyncing = false; _status = 'Restore berhasil!'; _lastSuccess = true; });
+    } catch (e) {
+      setState(() { _isSyncing = false; _status = 'Gagal restore: $e'; _lastSuccess = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final signedIn = _sheetsService.isSignedIn;
@@ -186,6 +216,15 @@ class _SyncScreenState extends State<SyncScreen> {
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
               ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: signedIn && !_isSyncing ? _restore : null,
+              icon: const Icon(Icons.restore),
+              label: const Text('Restore dari Sheet'),
             ),
           ),
 
