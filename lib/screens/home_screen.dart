@@ -324,7 +324,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            ),
+                    ),
+
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _navigateToAddExpense,
         label: const Text('Tambah Nota'),
