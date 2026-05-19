@@ -1,61 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/index.dart';
 import '../services/index.dart';
 import '../widgets/index.dart';
 
 class CategorizeScreen extends StatefulWidget {
-  final String imagePath;
-  final String merchantName;
-  final double amount;
+  final String? imagePath;
   final String ocrText;
   final List<OCRItem> items;
   final ExpenseRepository repository;
+  final InputMode source;
 
   const CategorizeScreen({
-    Key? key,
-    required this.imagePath,
-    required this.merchantName,
-    required this.amount,
-    required this.ocrText,
+    super.key,
+    this.imagePath,
+    this.ocrText = '',
     this.items = const [],
     required this.repository,
-  }) : super(key: key);
+    this.source = InputMode.ai,
+  });
 
   @override
   State<CategorizeScreen> createState() => _CategorizeScreenState();
 }
 
 class _CategorizeScreenState extends State<CategorizeScreen> {
-  late ExpenseCategory _selectedCategory;
-  late List<ExpenseItem> _expenseItems;
+  List<ExpenseItem> _expenseItems = [];
+  List<List<ExpenseCategory>> _itemSuggestions = [];
+  List<Category> _categories = [];
+  List<String?> _customCategoryIds = [];
   final TextEditingController _notesController = TextEditingController();
   bool _isSaving = false;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Guess primary category
-    _selectedCategory = CategorizationService.guessPrimaryCategory(
-      widget.merchantName,
-      widget.ocrText,
-    );
+    _load();
+  }
 
-    // Initialize expense items from OCR items
-    _expenseItems = widget.items.map((item) => ExpenseItem(
-      name: item.name,
-      price: item.price,
-      category: CategorizationService.guessCategory(item.name),
-    )).toList();
+  Future<void> _load() async {
+    final cats = await widget.repository.getCategories();
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+      _categories = cats;
+      _expenseItems = [];
+      _itemSuggestions = [];
+      _customCategoryIds = [];
+      for (final item in widget.items) {
+        final aiCategory = item.category != null
+            ? ExpenseCategory.fromString(item.category!)
+            : null;
+        _expenseItems.add(ExpenseItem(
+          name: item.name,
+          price: item.price,
+          category: aiCategory ?? CategorizationService.guessCategory(item.name),
+        ));
+        _itemSuggestions.add(CategorizationService.guessCategories(item.name));
+        _customCategoryIds.add(null);
+      }
+    });
+  }
+
+  ExpenseCategory _primaryCategory() {
+    if (_expenseItems.isEmpty) return ExpenseCategory.other;
+    // Prefer a non-other, non-custom category
+    for (final item in _expenseItems) {
+      if (item.category != ExpenseCategory.other) return item.category;
+    }
+    // All are 'other' or custom — pick the first custom name or other
+    final custom = _expenseItems.firstWhere(
+      (i) => i.customCategoryName != null,
+      orElse: () => _expenseItems.first,
+    );
+    return custom.category;
+  }
+
+  String? _primaryCustomCategoryName() {
+    for (final item in _expenseItems) {
+      if (item.customCategoryName != null) return item.customCategoryName;
+    }
+    return null;
   }
 
   Future<void> _saveExpense() async {
     setState(() => _isSaving = true);
     try {
+      final total = _expenseItems.fold<double>(0, (s, i) => s + i.price);
       final expense = Expense(
-        imagePath: widget.imagePath,
-        merchantName: widget.merchantName,
-        amount: widget.amount,
-        category: _selectedCategory,
+        imagePath: widget.imagePath ?? '',
+        amount: total,
+        category: _primaryCategory(),
+        customCategoryName: _primaryCustomCategoryName(),
         date: DateTime.now(),
         ocrText: widget.ocrText,
         notes: _notesController.text,
@@ -63,14 +100,14 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
       );
 
       await widget.repository.addExpense(expense);
-      
+
       if (mounted) {
         Navigator.pop(context, expense);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving expense: $e')),
+          SnackBar(content: Text('Gagal menyimpan: $e')),
         );
       }
     } finally {
@@ -82,9 +119,18 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Kategorikan Item')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final total = _expenseItems.fold<double>(0, (s, i) => s + i.price);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Categorize Expense'),
+        title: const Text('Kategorikan Item'),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -92,46 +138,32 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Summary card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+              // Total badge
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Column(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.receipt, size: 40, color: Colors.blue),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.merchantName,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  '\$${widget.amount.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.blue,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      Text(
+                        'Total ${_expenseItems.length} item',
+                        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
-                      const Divider(height: 32),
-                      CategorySelector(
-                        selectedCategory: _selectedCategory,
-                        onCategorySelected: (category) {
-                          setState(() => _selectedCategory = category);
-                        },
+                      const SizedBox(height: 4),
+                      Text(
+                        NumberFormat.currency(
+                          locale: 'id',
+                          symbol: 'Rp',
+                          decimalDigits: 0,
+                        ).format(total),
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
                     ],
                   ),
@@ -142,7 +174,7 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
               // Itemized section
               if (_expenseItems.isNotEmpty) ...[
                 const Text(
-                  'Individual Items',
+                  'Item',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -171,15 +203,49 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
                                     style: const TextStyle(fontWeight: FontWeight.w600),
                                   ),
                                 ),
-                                Text(
-                                  '\$${item.price.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
+                                if (item.price > 0)
+                                  Text(
+                                    NumberFormat.currency(
+                                      locale: 'id',
+                                      symbol: 'Rp',
+                                      decimalDigits: 0,
+                                    ).format(item.price),
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  )
+                                else
+                                  SizedBox(
+                                    width: 120,
+                                    child: TextField(
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.end,
+                                      decoration: const InputDecoration(
+                                        prefixText: 'Rp ',
+                                        isDense: true,
+                                        hintText: '0',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onSubmitted: (value) {
+                                        final price = double.tryParse(value.replaceAll('.', '').replaceAll(',', '.'));
+                                        if (price != null && price > 0) {
+                                          setState(() {
+                                            _expenseItems[index] = ExpenseItem(
+                                              name: item.name,
+                                              price: price,
+                                              category: item.category,
+                                            );
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
                               ],
                             ),
                             const SizedBox(height: 8),
                             CategorySelector(
                               selectedCategory: item.category,
+                              suggestions: _itemSuggestions[index],
+                              categories: _categories,
+                              selectedCategoryId: _customCategoryIds[index],
                               onCategorySelected: (category) {
                                 setState(() {
                                   _expenseItems[index] = ExpenseItem(
@@ -187,6 +253,18 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
                                     price: item.price,
                                     category: category,
                                   );
+                                  _customCategoryIds[index] = null;
+                                });
+                              },
+                              onCategoryChosen: (cat) {
+                                setState(() {
+                                  _expenseItems[index] = ExpenseItem(
+                                    name: item.name,
+                                    price: item.price,
+                                    category: ExpenseCategory.other,
+                                    customCategoryName: cat.name,
+                                  );
+                                  _customCategoryIds[index] = cat.id;
                                 });
                               },
                             ),
@@ -201,7 +279,7 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
 
               // Notes field
               const Text(
-                'Notes (Optional)',
+                'Catatan (Opsional)',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -212,7 +290,7 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
                 controller: _notesController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Add some notes about this expense...',
+                  hintText: 'Tambahkan catatan...',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -235,7 +313,7 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
                   child: _isSaving
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text(
-                          'Save Expense',
+                          'Simpan Pengeluaran',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                 ),

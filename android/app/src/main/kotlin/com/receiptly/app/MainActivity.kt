@@ -1,4 +1,4 @@
-package com.receiptly.receiptly_app
+package com.receiptly.app
 
 import io.flutter.embedding.android.FlutterActivity
 

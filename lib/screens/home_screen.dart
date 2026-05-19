@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/index.dart';
 import '../services/index.dart';
 import '../widgets/index.dart';
-import 'camera_screen.dart';
+import '../widgets/category_chart.dart';
+import '../widgets/budget_progress.dart';
+import 'input_mode_picker_screen.dart';
+import 'settings_screen.dart';
+
+enum _Period { thisMonth, lastMonth, last30Days, allTime, custom }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  final VoidCallback onToggleTheme;
+
+  const HomeScreen({super.key, required this.onToggleTheme});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -14,28 +22,109 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late ExpenseRepository _repository;
   List<Expense> _expenses = [];
+  List<Category> _categories = [];
   bool _isLoading = true;
+
+  DateTime _startDate = _firstOfMonth(DateTime.now());
+  DateTime _endDate = DateTime.now();
+  _Period _selectedPeriod = _Period.thisMonth;
+
+  static DateTime _firstOfMonth(DateTime date) =>
+      DateTime(date.year, date.month, 1);
+
+  static DateTime _lastOfMonth(DateTime date) =>
+      DateTime(date.year, date.month + 1, 0);
 
   @override
   void initState() {
     super.initState();
     _repository = ExpenseRepository();
     _loadExpenses();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await _repository.getCategories();
+      if (mounted) setState(() => _categories = cats);
+    } catch (_) {}
   }
 
   Future<void> _loadExpenses() async {
     setState(() => _isLoading = true);
     try {
-      final expenses = await _repository.getAllExpenses();
+      final List<Expense> expenses;
+      if (_selectedPeriod == _Period.allTime) {
+        expenses = await _repository.getAllExpenses();
+      } else {
+        expenses = await _repository.getExpensesByDateRange(
+          _startDate,
+          _endDate.add(const Duration(days: 1)),
+        );
+      }
       setState(() {
         _expenses = expenses;
         _isLoading = false;
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading expenses: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat pengeluaran: $e')),
+        );
+      }
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _setPeriod(_Period period) async {
+    final now = DateTime.now();
+    setState(() {
+      _selectedPeriod = period;
+      switch (period) {
+        case _Period.thisMonth:
+          _startDate = _firstOfMonth(now);
+          _endDate = now;
+        case _Period.lastMonth:
+          final lastMonth = DateTime(now.year, now.month - 1, 1);
+          _startDate = _firstOfMonth(lastMonth);
+          _endDate = _lastOfMonth(lastMonth);
+        case _Period.last30Days:
+          _startDate = now.subtract(const Duration(days: 30));
+          _endDate = now;
+        case _Period.allTime:
+          _startDate = DateTime(2000);
+          _endDate = now;
+        case _Period.custom:
+          return;
+      }
+    });
+    _loadExpenses();
+  }
+
+  Future<void> _pickDateRange() async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: DateTimeRange(
+        start: _startDate,
+        end: _endDate,
+      ),
+      firstDate: DateTime(2000),
+      lastDate: now,
+      locale: const Locale('id'),
+      helpText: 'Pilih Rentang Tanggal',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+      fieldStartHintText: 'Tanggal Mulai',
+      fieldEndHintText: 'Tanggal Akhir',
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+        _selectedPeriod = _Period.custom;
+      });
+      _loadExpenses();
     }
   }
 
@@ -43,26 +132,32 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await _repository.deleteExpense(id);
       _loadExpenses();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Expense deleted')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pengeluaran dihapus')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error deleting expense: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus: $e')),
+        );
+      }
     }
   }
 
-  void _navigateToCamera() async {
+  void _navigateToAddExpense() async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (context) => CameraScreen(repository: _repository),
+        builder: (context) => InputModePickerScreen(
+          repository: _repository,
+        ),
       ),
     );
-
     if (result == true) {
       _loadExpenses();
+      _loadCategories();
     }
   }
 
@@ -72,60 +167,67 @@ class _HomeScreenState extends State<HomeScreen> {
       0,
       (sum, expense) => sum + expense.amount,
     );
+    final dateFormat = DateFormat('dd MMM yyyy', 'id');
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Receiptly'),
         elevation: 0,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              Theme.of(context).brightness == Brightness.dark
+                  ? Icons.light_mode
+                  : Icons.dark_mode,
+            ),
+            tooltip: 'Ganti tema',
+            onPressed: widget.onToggleTheme,
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Pengaturan',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    repository: _repository,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _expenses.isEmpty
-              ? _buildEmptyState()
-              : SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      // Summary card
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Card(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                const Text(
-                                  'Total Expenses',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '\$${totalExpenses.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  '${_expenses.length} ${_expenses.length == 1 ? 'expense' : 'expenses'}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+          : RefreshIndicator(
+              onRefresh: _loadExpenses,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _buildPeriodSelector(),
+                    _buildDateRangeBar(dateFormat),
+                    _buildSummaryCard(totalExpenses, dateFormat),
+                    if (_expenses.isNotEmpty)
+                      CategoryChart(
+                        expenses: _expenses,
+                        categories: _categories,
                       ),
-                      // Expense list
+                    if (_expenses.isNotEmpty && _categories.any((c) => c.hasBudget))
+                      BudgetProgress(
+                        expenses: _expenses,
+                        categories: _categories,
+                      ),
+                    if (_expenses.isEmpty)
+                      _buildEmptyState()
+                    else
                       ListView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 100),
                         itemCount: _expenses.length,
                         itemBuilder: (context, index) {
                           final expense = _expenses[index];
@@ -135,46 +237,149 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
+                  ],
                 ),
+              ),
+            ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToCamera,
-        label: const Text('Add Receipt'),
-        icon: const Icon(Icons.camera_alt),
+        onPressed: _navigateToAddExpense,
+        label: const Text('Tambah Nota'),
+        icon: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    const periods = [
+      (_Period.thisMonth, 'Bulan Ini'),
+      (_Period.lastMonth, 'Bulan Lalu'),
+      (_Period.last30Days, '30 Hari'),
+      (_Period.allTime, 'Semua'),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Row(
+        children: periods.map((period) {
+          final isSelected = _selectedPeriod == period.$1;
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: Text(period.$2),
+              selected: isSelected,
+              onSelected: (_) => _setPeriod(period.$1),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDateRangeBar(DateFormat dateFormat) {
+    if (_selectedPeriod == _Period.allTime) return const SizedBox.shrink();
+
+    final label = '${dateFormat.format(_startDate)} - ${dateFormat.format(_endDate)}';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        onTap: _pickDateRange,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            border: Border.all(color: Colors.grey.shade300),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface),
+                ),
+              ),
+              Icon(Icons.edit_calendar, size: 16, color: Theme.of(context).colorScheme.primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(double totalExpenses, DateFormat dateFormat) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Text(
+                _selectedPeriod == _Period.allTime
+                    ? 'Total Pengeluaran'
+                    : 'Pengeluaran Periode Ini',
+                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                NumberFormat.currency(
+                  locale: 'id',
+                  symbol: 'Rp',
+                  decimalDigits: 0,
+                ).format(totalExpenses),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${_expenses.length} transaksi',
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.receipt_long,
-            size: 80,
-            color: Colors.grey[300],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No expenses yet',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[600],
+    final isAllTime = _selectedPeriod == _Period.allTime;
+    return Padding(
+      padding: const EdgeInsets.only(top: 60),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              isAllTime ? Icons.receipt_long : Icons.search_off,
+              size: 80,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Tap the button below to add your first receipt',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
+            const SizedBox(height: 24),
+            Text(
+              isAllTime ? 'Belum ada pengeluaran' : 'Tidak ada pengeluaran',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              isAllTime
+                  ? 'Tekan tombol di bawah untuk menambahkan nota pertama'
+                  : 'Tidak ada pengeluaran di periode ini',
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

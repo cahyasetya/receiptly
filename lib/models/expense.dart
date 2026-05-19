@@ -6,18 +6,24 @@ class ExpenseItem {
   final String name;
   final double price;
   final ExpenseCategory category;
+  final String? customCategoryName;
 
   ExpenseItem({
     required this.name,
     required this.price,
     required this.category,
+    this.customCategoryName,
   });
+
+  /// Resolved display name: custom category name if set, else built-in display name.
+  String get displayCategoryName => customCategoryName ?? category.displayName;
 
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'price': price,
       'category': category.name,
+      if (customCategoryName != null) 'customCategory': customCategoryName,
     };
   }
 
@@ -26,6 +32,7 @@ class ExpenseItem {
       name: map['name'] as String,
       price: (map['price'] as num).toDouble(),
       category: ExpenseCategory.fromString(map['category'] as String),
+      customCategoryName: map['customCategory'] as String?,
     );
   }
 }
@@ -33,9 +40,9 @@ class ExpenseItem {
 class Expense {
   final String? id;
   final String imagePath;
-  final String merchantName;
   final double amount;
-  final ExpenseCategory category; // Primary category or summary category
+  final ExpenseCategory category;
+  final String? customCategoryName;
   final DateTime date;
   final String ocrText;
   final String? notes;
@@ -45,9 +52,9 @@ class Expense {
   Expense({
     this.id,
     required this.imagePath,
-    required this.merchantName,
     required this.amount,
     required this.category,
+    this.customCategoryName,
     required this.date,
     required this.ocrText,
     this.items = const [],
@@ -55,14 +62,16 @@ class Expense {
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
-  // Convert Expense to Map for database storage
+  String get displayCategoryName => customCategoryName ?? category.displayName;
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'imagePath': imagePath,
-      'merchantName': merchantName,
+      'merchantName': '',
       'amount': amount,
       'category': category.name,
+      'customCategoryName': customCategoryName,
       'date': date.toIso8601String(),
       'ocrText': ocrText,
       'notes': notes,
@@ -71,7 +80,6 @@ class Expense {
     };
   }
 
-  // Create Expense from database Map
   factory Expense.fromMap(Map<String, dynamic> map) {
     final itemsJson = map['itemsJson'] as String?;
     List<ExpenseItem> items = [];
@@ -83,9 +91,9 @@ class Expense {
     return Expense(
       id: map['id'] as String?,
       imagePath: map['imagePath'] as String,
-      merchantName: map['merchantName'] as String,
       amount: (map['amount'] as num).toDouble(),
       category: ExpenseCategory.fromString(map['category'] as String),
+      customCategoryName: map['customCategoryName'] as String?,
       date: DateTime.parse(map['date'] as String),
       ocrText: map['ocrText'] as String,
       notes: map['notes'] as String?,
@@ -94,17 +102,26 @@ class Expense {
     );
   }
 
-  // Helper getters for formatting
-  String get formattedDate => DateFormat('MMM dd, yyyy').format(date);
-  String get formattedAmount => '\$${amount.toStringAsFixed(2)}';
+  String get formattedDate => DateFormat('dd MMM yyyy', 'id').format(date);
+  String get formattedAmount => NumberFormat.currency(
+    locale: 'id',
+    symbol: 'Rp',
+    decimalDigits: 0,
+  ).format(amount);
 
-  // Copy with method for updates
+  String get title {
+    if (items.isEmpty) return 'Nota';
+    final names = items.map((i) => i.name).take(2).join(', ');
+    final suffix = items.length > 2 ? ', ...' : '';
+    return '$names$suffix';
+  }
+
   Expense copyWith({
     String? id,
     String? imagePath,
-    String? merchantName,
     double? amount,
     ExpenseCategory? category,
+    String? customCategoryName,
     DateTime? date,
     String? ocrText,
     String? notes,
@@ -113,9 +130,9 @@ class Expense {
     return Expense(
       id: id ?? this.id,
       imagePath: imagePath ?? this.imagePath,
-      merchantName: merchantName ?? this.merchantName,
       amount: amount ?? this.amount,
       category: category ?? this.category,
+      customCategoryName: customCategoryName ?? this.customCategoryName,
       date: date ?? this.date,
       ocrText: ocrText ?? this.ocrText,
       notes: notes ?? this.notes,

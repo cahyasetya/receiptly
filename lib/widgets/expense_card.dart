@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/index.dart';
 
 class ExpenseCard extends StatelessWidget {
@@ -7,11 +8,11 @@ class ExpenseCard extends StatelessWidget {
   final VoidCallback? onDelete;
 
   const ExpenseCard({
-    Key? key,
+    super.key,
     required this.expense,
     this.onTap,
     this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +23,7 @@ class ExpenseCard extends StatelessWidget {
           width: 50,
           height: 50,
           decoration: BoxDecoration(
-            color: expense.category.color.withOpacity(0.2),
+            color: expense.category.color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(
@@ -33,7 +34,7 @@ class ExpenseCard extends StatelessWidget {
           ),
         ),
         title: Text(
-          expense.merchantName,
+          expense.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -49,11 +50,11 @@ class ExpenseCard extends StatelessWidget {
                 vertical: 2,
               ),
               decoration: BoxDecoration(
-                color: expense.category.color.withOpacity(0.15),
+                color: expense.category.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                expense.category.displayName,
+                expense.displayCategoryName,
                 style: TextStyle(
                   fontSize: 12,
                   color: expense.category.color,
@@ -66,7 +67,7 @@ class ExpenseCard extends StatelessWidget {
               expense.formattedDate,
               style: TextStyle(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -113,7 +114,11 @@ class ExpenseCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          '\$${item.price.toStringAsFixed(2)}',
+                          NumberFormat.currency(
+                            locale: 'id',
+                            symbol: 'Rp',
+                            decimalDigits: 0,
+                          ).format(item.price),
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -121,17 +126,17 @@ class ExpenseCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                  )).toList(),
+                  )),
                   if (expense.notes != null && expense.notes!.isNotEmpty) ...[
                     const Divider(),
                     Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Notes: ${expense.notes}',
+                        'Catatan: ${expense.notes}',
                         style: TextStyle(
                           fontSize: 12,
                           fontStyle: FontStyle.italic,
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ),

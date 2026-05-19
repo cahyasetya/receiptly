@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'dart:io';
 import '../models/index.dart';
 import '../services/index.dart';
@@ -9,23 +10,18 @@ class OCRScreen extends StatefulWidget {
   final ExpenseRepository repository;
 
   const OCRScreen({
-    Key? key,
+    super.key,
     required this.imagePath,
     required this.repository,
-  }) : super(key: key);
+  });
 
   @override
   State<OCRScreen> createState() => _OCRScreenState();
 }
 
 class _OCRScreenState extends State<OCRScreen> {
-  late OCRService _ocrService;
-  late TextEditingController _merchantController;
-  late TextEditingController _amountController;
   late TextEditingController _ocrTextController;
 
-  String? _merchantName;
-  double? _amount;
   List<OCRItem> _items = [];
   String _fullOCRText = '';
   bool _isProcessing = true;
@@ -34,9 +30,6 @@ class _OCRScreenState extends State<OCRScreen> {
   @override
   void initState() {
     super.initState();
-    _ocrService = OCRService();
-    _merchantController = TextEditingController();
-    _amountController = TextEditingController();
     _ocrTextController = TextEditingController();
     _processImage();
   }
@@ -48,61 +41,41 @@ class _OCRScreenState extends State<OCRScreen> {
         _errorMessage = null;
       });
 
-      final result = await _ocrService.recognizeTextFromImage(widget.imagePath);
+      final aiService = AIOCRService();
+      await aiService.init(repository: widget.repository);
+      final result = await aiService.recognizeTextFromImage(widget.imagePath);
 
       setState(() {
         _fullOCRText = result.fullText;
-        _merchantName = result.merchantName;
-        _amount = result.amount;
         _items = result.items;
-
-        _merchantController.text = _merchantName ?? '';
-        _amountController.text = _amount?.toStringAsFixed(2) ?? '';
         _ocrTextController.text = _fullOCRText;
-
         _isProcessing = false;
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Failed to process image: $e';
+        _errorMessage = 'Gagal memproses gambar: $e';
         _isProcessing = false;
       });
     }
   }
 
   Future<void> _proceedToCategory() async {
-    // Validate inputs
-    if (_merchantController.text.isEmpty) {
+    if (_items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter merchant name')),
+        const SnackBar(content: Text('Tidak ada item yang terdeteksi')),
       );
       return;
     }
-
-    double? amount;
-    try {
-      amount = double.parse(_amountController.text);
-      if (amount <= 0) throw FormatException('Amount must be greater than 0');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
-      );
-      return;
-    }
-
-    // Navigate to categorize screen
-    if (amount == null) return;
 
     final result = await Navigator.push<Expense>(
       context,
       MaterialPageRoute(
         builder: (context) => CategorizeScreen(
           imagePath: widget.imagePath,
-          merchantName: _merchantController.text,
-          amount: amount!,
           ocrText: _fullOCRText,
           items: _items,
           repository: widget.repository,
+          source: InputMode.ai,
         ),
       ),
     );
@@ -114,9 +87,11 @@ class _OCRScreenState extends State<OCRScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final itemsTotal = _items.fold<double>(0, (sum, i) => sum + i.price);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Review Receipt'),
+        title: const Text('Tinjau Nota'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
@@ -129,7 +104,7 @@ class _OCRScreenState extends State<OCRScreen> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Processing receipt...'),
+                  Text('Memproses nota...'),
                 ],
               ),
             )
@@ -166,75 +141,69 @@ class _OCRScreenState extends State<OCRScreen> {
                         ),
                       ),
 
-                    // Merchant name field
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Merchant Name',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
+                    // Detected items summary
+                    if (_items.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Icon(Icons.receipt_long, size: 20, color: Theme.of(context).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_items.length} item terdeteksi',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const Spacer(),
+                          Text(
+                            NumberFormat.currency(
+                              locale: 'id',
+                              symbol: 'Rp',
+                              decimalDigits: 0,
+                            ).format(itemsTotal),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _merchantController,
-                      decoration: InputDecoration(
-                        hintText: 'Enter merchant name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                      const SizedBox(height: 8),
+                      ..._items.map((item) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 2),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(item.name, style: const TextStyle(fontSize: 13))),
+                            Text(
+                              NumberFormat.currency(
+                                locale: 'id',
+                                symbol: 'Rp',
+                                decimalDigits: 0,
+                              ).format(item.price),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ],
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-
-                    // Amount field
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Amount',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        prefixText: '\$ ',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
+                      )),
+                    ],
 
                     // OCR Text preview (collapsible)
                     const SizedBox(height: 24),
                     ExpansionTile(
-                      title: const Text('OCR Text Preview'),
+                      title: const Text('Teks OCR'),
                       children: [
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey[100],
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             _fullOCRText.isEmpty
-                                ? 'No text detected'
+                                ? 'Tidak ada teks terdeteksi'
                                 : _fullOCRText,
                             style: const TextStyle(fontSize: 12),
                           ),
@@ -249,7 +218,7 @@ class _OCRScreenState extends State<OCRScreen> {
                       height: 56,
                       child: ElevatedButton(
                         onPressed: _proceedToCategory,
-                        child: const Text('Continue to Category'),
+                        child: const Text('Lanjut ke Kategori'),
                       ),
                     ),
                   ],
@@ -261,10 +230,7 @@ class _OCRScreenState extends State<OCRScreen> {
 
   @override
   void dispose() {
-    _merchantController.dispose();
-    _amountController.dispose();
     _ocrTextController.dispose();
-    _ocrService.dispose();
     super.dispose();
   }
 }

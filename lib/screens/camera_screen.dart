@@ -1,15 +1,17 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/index.dart';
+import 'crop_screen.dart';
 import 'ocr_screen.dart';
 
 class CameraScreen extends StatefulWidget {
   final ExpenseRepository repository;
 
   const CameraScreen({
-    Key? key,
+    super.key,
     required this.repository,
-  }) : super(key: key);
+  });
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -19,32 +21,45 @@ class _CameraScreenState extends State<CameraScreen> {
   final ImagePicker _imagePicker = ImagePicker();
   bool _isProcessing = false;
 
-  Future<void> _captureImage() async {
+  Future<void> _pickAndCrop(ImageSource source) async {
     try {
       setState(() => _isProcessing = true);
 
       final pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: source,
         imageQuality: 85,
       );
 
-      if (pickedFile != null) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OCRScreen(
-                imagePath: pickedFile.path,
-                repository: widget.repository,
-              ),
+      if (pickedFile == null || !mounted) {
+        if (mounted) setState(() => _isProcessing = false);
+        return;
+      }
+
+      if (mounted) setState(() => _isProcessing = false);
+
+      final imagePath = await _showCropChoice(pickedFile.path);
+      if (imagePath == null) return;
+
+      if (mounted) {
+        final result = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (context) => OCRScreen(
+              imagePath: imagePath,
+              repository: widget.repository,
             ),
-          );
+          ),
+        );
+        if (result == true && mounted) {
+          Navigator.pop(context, true);
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error capturing image: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memproses gambar: $e')),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -52,44 +67,71 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    try {
-      setState(() => _isProcessing = true);
-
-      final pickedFile = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-      );
-
-      if (pickedFile != null) {
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OCRScreen(
-                imagePath: pickedFile.path,
-                repository: widget.repository,
+  Future<String?> _showCropChoice(String imagePath) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Nota yang dipilih',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking image: $e')),
+              const SizedBox(height: 16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.file(
+                  File(imagePath),
+                  height: 150,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context, 'crop'),
+                  icon: const Icon(Icons.crop),
+                  label: const Text('Potong Nota'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => Navigator.pop(context, 'skip'),
+                  icon: const Icon(Icons.auto_awesome),
+                  label: const Text('Langsung OCR'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (!mounted) return null;
+    if (action == 'crop') {
+      return Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => CropScreen(imagePath: imagePath),
+        ),
       );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
+    } else if (action == 'skip') {
+      return imagePath;
     }
+    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Capture Receipt'),
+        title: const Text('Ambil Nota'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context, false),
@@ -102,7 +144,7 @@ class _CameraScreenState extends State<CameraScreen> {
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
-                  Text('Processing image...'),
+                  Text('Memproses gambar...'),
                 ],
               ),
             )
@@ -111,24 +153,25 @@ class _CameraScreenState extends State<CameraScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.camera_alt,
+                    Icons.receipt_long,
                     size: 80,
-                    color: Colors.grey[300],
+                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Add Receipt Photo',
+                  Text(
+                    'Ambil Foto Nota',
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Take a photo or choose from gallery',
+                    'Foto atau pilih dari galeri, lalu potong jika perlu',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 48),
@@ -140,9 +183,9 @@ class _CameraScreenState extends State<CameraScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton.icon(
-                            onPressed: _captureImage,
+                            onPressed: () => _pickAndCrop(ImageSource.camera),
                             icon: const Icon(Icons.camera_alt),
-                            label: const Text('Take Photo'),
+                            label: const Text('Ambil Foto'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Theme.of(context).primaryColor,
                               foregroundColor: Colors.white,
@@ -154,9 +197,9 @@ class _CameraScreenState extends State<CameraScreen> {
                           width: double.infinity,
                           height: 56,
                           child: OutlinedButton.icon(
-                            onPressed: _pickFromGallery,
+                            onPressed: () => _pickAndCrop(ImageSource.gallery),
                             icon: const Icon(Icons.image),
-                            label: const Text('Choose from Gallery'),
+                            label: const Text('Pilih dari Galeri'),
                           ),
                         ),
                       ],

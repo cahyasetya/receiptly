@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 
 enum ExpenseCategory {
-  food('Food', Colors.orange),
-  transport('Transport', Colors.blue),
-  utilities('Utilities', Colors.purple),
+  ipl('IPL', Colors.purple),
+  listrik('Listrik', Colors.amber),
+  air('Air', Colors.blue),
+  wifi('WIFI', Colors.indigo),
   groceries('Groceries', Colors.green),
-  dining('Dining', Colors.red),
-  entertainment('Entertainment', Colors.pink),
-  shopping('Shopping', Colors.indigo),
-  healthcare('Healthcare', Colors.teal),
-  other('Other', Colors.grey);
+  buah('Buah-buahan', Colors.orange),
+  bahanMakanan('Bahan Makanan', Colors.teal),
+  laundry('Laundry', Colors.cyan),
+  makanan('Makanan', Colors.red),
+  transportasi('Transportasi', Colors.blueGrey),
+  rekreasi('Rekreasi', Colors.pink),
+  takTerduga('Tak Terduga', Colors.grey),
+  tabunganApart('Tabungan Apart', Colors.brown),
+  skincare('Skincare & Make Up', Colors.deepPurple),
+  pakaian('Pakaian', Colors.lime),
+  other('Lainnya', Colors.grey);
 
   final String displayName;
   final Color color;
@@ -18,31 +25,47 @@ enum ExpenseCategory {
 
   String get icon {
     switch (this) {
-      case ExpenseCategory.food:
-        return '🍔';
-      case ExpenseCategory.transport:
-        return '🚗';
-      case ExpenseCategory.utilities:
-        return '💡';
+      case ExpenseCategory.ipl:
+        return '🏢';
+      case ExpenseCategory.listrik:
+        return '⚡';
+      case ExpenseCategory.air:
+        return '🚿';
+      case ExpenseCategory.wifi:
+        return '📶';
       case ExpenseCategory.groceries:
-        return '🛒';
-      case ExpenseCategory.dining:
+        return '🧴';
+      case ExpenseCategory.buah:
+        return '🍎';
+      case ExpenseCategory.bahanMakanan:
+        return '🥘';
+      case ExpenseCategory.laundry:
+        return '👕';
+      case ExpenseCategory.makanan:
         return '🍽️';
-      case ExpenseCategory.entertainment:
+      case ExpenseCategory.transportasi:
+        return '🚗';
+      case ExpenseCategory.rekreasi:
         return '🎬';
-      case ExpenseCategory.shopping:
-        return '👜';
-      case ExpenseCategory.healthcare:
-        return '⚕️';
-      case ExpenseCategory.other:
+      case ExpenseCategory.takTerduga:
         return '📌';
+      case ExpenseCategory.tabunganApart:
+        return '🏦';
+      case ExpenseCategory.skincare:
+        return '💄';
+      case ExpenseCategory.pakaian:
+        return '👗';
+      case ExpenseCategory.other:
+        return '📦';
     }
   }
 
   static ExpenseCategory fromString(String value) {
     try {
       return ExpenseCategory.values.firstWhere(
-        (e) => e.name.toLowerCase() == value.toLowerCase(),
+        (e) =>
+            e.name.toLowerCase() == value.toLowerCase() ||
+            e.displayName.toLowerCase() == value.toLowerCase(),
       );
     } catch (e) {
       return ExpenseCategory.other;

@@ -36,11 +36,39 @@ class ExpenseRepository {
     return _databaseService.getTotalExpenses();
   }
 
+  Future<double> getTotalExpensesByDateRange(DateTime start, DateTime end) async {
+    return _databaseService.getTotalExpensesByDateRange(start, end);
+  }
+
   Future<Map<String, double>> getCategoryTotals() async {
     return _databaseService.getCategoryTotals();
+  }
+
+  Future<Map<String, double>> getCategoryTotalsByDateRange(DateTime start, DateTime end) async {
+    return _databaseService.getCategoryTotalsByDateRange(start, end);
   }
 
   Future<void> close() async {
     await _databaseService.close();
   }
+
+  Future<String?> getSetting(String key) async {
+    return _databaseService.getSetting(key);
+  }
+
+  Future<void> setSetting(String key, String value) async {
+    await _databaseService.setSetting(key, value);
+  }
+
+  // ------------------------------------------------------------------
+  //  Categories (built-in + user-defined)
+  // ------------------------------------------------------------------
+
+  Future<List<Category>> getCategories() => _databaseService.getCategories();
+
+  Future<void> addCategory(Category cat) => _databaseService.insertCategory(cat);
+
+  Future<void> updateCategory(Category cat) => _databaseService.updateCategory(cat);
+  Future<void> deleteCategory(String id) =>
+      _databaseService.deleteCategory(id);
 }
