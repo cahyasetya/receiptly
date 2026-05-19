@@ -54,6 +54,18 @@ class DatabaseService {
     return id;
   }
 
+  /// Insert expense with a specific ID. Skips if ID already exists.
+  Future<void> insertExpenseWithId(Expense expense) async {
+    final db = await database;
+    try {
+      await db.insert(
+        _expenseTableName,
+        expense.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+    } catch (_) {}
+  }
+
   Future<Expense?> getExpense(String id) async {
     final db = await database;
     final result = await db.query(

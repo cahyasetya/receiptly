@@ -8,6 +8,10 @@ class ExpenseRepository {
     return _databaseService.insertExpense(expense);
   }
 
+  Future<void> addExpenseWithId(Expense expense) async {
+    return _databaseService.insertExpenseWithId(expense);
+  }
+
   Future<Expense?> getExpense(String id) async {
     return _databaseService.getExpense(id);
   }

@@ -37,7 +37,10 @@ class GoogleSheetsService {
       final future = GoogleSignIn.instance.attemptLightweightAuthentication();
       if (future == null) return;
       final account = await future;
-      if (account != null) {
+      if (account == null) return;
+      // Silently authorize scopes — if user previously granted, no UI shown
+      final authz = await account.authorizationClient.authorizationForScopes(_scopes);
+      if (authz != null) {
         _account = account;
         _log.info('Session restored: ${account.email}');
       }
@@ -286,7 +289,7 @@ class GoogleSheetsService {
           notes: '',
           items: items,
         );
-        try { await repository.addExpense(expense); restored++; } catch (_) {}
+        try { await repository.addExpenseWithId(expense); restored++; } catch (_) {}
       }
       _log.info('Restore $restored expenses');
     }
