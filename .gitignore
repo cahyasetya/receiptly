@@ -48,9 +48,6 @@ app.*.map.json
 .opencode/plugins/
 .opencode/tools/
 
-# Assets (placeholder icon until real one is provided)
-assets/icon.png
-
 # Environment
 .env
 .env.local
