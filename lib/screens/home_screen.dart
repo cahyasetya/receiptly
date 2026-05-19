@@ -5,6 +5,8 @@ import '../services/index.dart';
 import '../widgets/index.dart';
 import '../widgets/category_chart.dart';
 import '../widgets/budget_progress.dart';
+import '../widgets/empty_state.dart';
+import '../widgets/summary_card.dart';
 import 'input_mode_picker_screen.dart';
 import 'settings_screen.dart';
 
@@ -210,7 +212,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildPeriodSelector(),
                     _buildDateRangeBar(dateFormat),
-                    _buildSummaryCard(totalExpenses, dateFormat),
+                    SummaryCard(
+                      totalExpenses: totalExpenses,
+                      transactionCount: _expenses.length,
+                      isAllTime: _selectedPeriod == _Period.allTime,
+                    ),
                     if (_expenses.isNotEmpty)
                       CategoryChart(
                         expenses: _expenses,
@@ -222,7 +228,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         categories: _categories,
                       ),
                     if (_expenses.isEmpty)
-                      _buildEmptyState()
+                      EmptyState(
+                        icon: _selectedPeriod == _Period.allTime ? Icons.receipt_long : Icons.search_off,
+                        title: _selectedPeriod == _Period.allTime ? 'Belum ada pengeluaran' : 'Tidak ada pengeluaran',
+                        subtitle: _selectedPeriod == _Period.allTime
+                            ? 'Tekan tombol di bawah untuk menambahkan nota pertama'
+                            : 'Tidak ada pengeluaran di periode ini',
+                      )
                     else
                       ListView.builder(
                         shrinkWrap: true,
@@ -309,78 +321,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSummaryCard(double totalExpenses, DateFormat dateFormat) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Text(
-                _selectedPeriod == _Period.allTime
-                    ? 'Total Pengeluaran'
-                    : 'Pengeluaran Periode Ini',
-                style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                NumberFormat.currency(
-                  locale: 'id',
-                  symbol: 'Rp',
-                  decimalDigits: 0,
-                ).format(totalExpenses),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${_expenses.length} transaksi',
-                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    final isAllTime = _selectedPeriod == _Period.allTime;
-    return Padding(
-      padding: const EdgeInsets.only(top: 60),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              isAllTime ? Icons.receipt_long : Icons.search_off,
-              size: 80,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              isAllTime ? 'Belum ada pengeluaran' : 'Tidak ada pengeluaran',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isAllTime
-                  ? 'Tekan tombol di bawah untuk menambahkan nota pertama'
-                  : 'Tidak ada pengeluaran di periode ini',
-              style: TextStyle(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
