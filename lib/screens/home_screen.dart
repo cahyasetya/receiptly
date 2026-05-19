@@ -24,8 +24,10 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late ExpenseRepository _repository;
   List<Expense> _expenses = [];
+  List<Expense> _filteredExpenses = [];
   List<Category> _categories = [];
   bool _isLoading = true;
+  final TextEditingController _searchController = TextEditingController();
 
   DateTime _startDate = _firstOfMonth(DateTime.now());
   DateTime _endDate = DateTime.now();
@@ -68,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _expenses = expenses;
         _isLoading = false;
       });
+      _filterExpenses();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,6 +79,23 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       setState(() => _isLoading = false);
     }
+  }
+
+  void _filterExpenses() {
+    final query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredExpenses = List.from(_expenses);
+      } else {
+        _filteredExpenses = _expenses.where((e) {
+          if (e.title.toLowerCase().contains(query)) return true;
+          for (final item in e.items) {
+            if (item.name.toLowerCase().contains(query)) return true;
+          }
+          return false;
+        }).toList();
+      }
+    });
   }
 
   Future<void> _setPeriod(_Period period) async {
@@ -212,11 +232,63 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     _buildPeriodSelector(),
                     _buildDateRangeBar(dateFormat),
-                    SummaryCard(
-                      totalExpenses: totalExpenses,
-                      transactionCount: _expenses.length,
-                      isAllTime: _selectedPeriod == _Period.allTime,
-                    ),
+                    if (_expenses.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                        child: TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: 'Cari pengeluaran...',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    onPressed: () { _searchController.clear(); _filterExpenses(); },
+                                  )
+                                : null,
+                          ),
+                          onChanged: (_) => _filterExpenses(),
+                        ),
+                      ),
+                    if (_expenses.isNotEmpty)
+                      SummaryCard(
+                        totalExpenses: totalExpenses,
+                        transactionCount: _expenses.length,
+                        isAllTime: _selectedPeriod == _Period.allTime,
+                      ),
+                    if (_expenses.isNotEmpty)
+                      CategoryChart(
+                        expenses: _expenses,
+                        categories: _categories,
+                      ),
+                    if (_expenses.isNotEmpty && _categories.any((c) => c.hasBudget))
+                      BudgetProgress(
+                        expenses: _expenses,
+                        categories: _categories,
+                      ),
+                    if (_filteredExpenses.isEmpty)
+                      EmptyState(
+                        icon: _searchController.text.isNotEmpty ? Icons.search_off : Icons.receipt_long,
+                        title: _searchController.text.isNotEmpty ? 'Pencarian tidak ditemukan' : 'Belum ada pengeluaran',
+                        subtitle: _searchController.text.isNotEmpty ? 'Coba kata kunci lain' : 'Tekan tombol di bawah untuk menambahkan nota pertama',
+                      )
+                    else
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 100),
+                        itemCount: _filteredExpenses.length,
+                        itemBuilder: (context, index) {
+                          final expense = _filteredExpenses[index];
+                          return ExpenseCard(
+                            expense: expense,
+                            onDelete: () => _deleteExpense(expense.id!),
+                          );
+                        },
+                      ),
                     if (_expenses.isNotEmpty)
                       CategoryChart(
                         expenses: _expenses,
@@ -319,6 +391,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
 }
