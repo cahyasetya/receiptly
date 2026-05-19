@@ -46,6 +46,7 @@ dependencies:
   fl_chart: ^1.2.0
   google_sign_in: ^7.2.0
   googleapis: ^16.0.0
+  flutter_native_splash: ^2.4.0
 
 
 dev_dependencies:
@@ -105,3 +106,13 @@ flutter_launcher_icons:
   image_path: "assets/icon.png"
   adaptive_icon_background: "#1976D2"
   adaptive_icon_foreground: "assets/icon.png"
+
+# Splash screen — run after changing:
+#   dart run flutter_native_splash:create
+flutter_native_splash:
+  color: "#1976D2"
+  image: "assets/icon.png"
+  android: true
+  ios: false
+  android_gravity: center
+  fullscreen: true
