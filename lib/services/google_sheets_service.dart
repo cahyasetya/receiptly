@@ -163,7 +163,24 @@ class GoogleSheetsService {
 
     final sheets = await _sheetsApi();
     final driveApi = await _driveApi();
-    final sid = spreadsheetId ?? await _getOrCreateSpreadsheet(sheets, driveApi);
+
+    // Always ensure the backups folder exists
+    final folderId = await _getOrCreateFolder(driveApi);
+
+    // Get or create spreadsheet inside the folder
+    String sid;
+    if (spreadsheetId != null && spreadsheetId.isNotEmpty) {
+      sid = spreadsheetId;
+      // Ensure spreadsheet is inside the backups folder
+      try {
+        await driveApi.files.update(drive.File(), sid, addParents: folderId);
+        _log.info('Spreadsheet $sid dipastikan di folder');
+      } catch (e) {
+        _log.warn('Gagal update parents spreadsheet: $e');
+      }
+    } else {
+      sid = await _getOrCreateSpreadsheet(sheets, driveApi);
+    }
 
     final expenses = await repository.getAllExpenses();
     final categories = await repository.getCategories();
