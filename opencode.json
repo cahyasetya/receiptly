@@ -1,0 +1,111 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "plan": {
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "code-review": {
+      "description": "Reviews code for best practices, security, performance, and maintainability",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "prompt": "You are a senior code reviewer. Analyze code for: security vulnerabilities, performance bottlenecks, maintainability issues, error handling gaps, and adherence to Dart/Flutter best practices. Provide specific, actionable feedback. Do NOT make any code changes.",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "test-creator": {
+      "description": "Creates comprehensive unit, widget, and integration tests for Flutter/Dart code",
+      "mode": "subagent",
+      "temperature": 0.2,
+      "prompt": "You are a test engineer. Write comprehensive tests following Flutter testing best practices. Use flutter_test package. Create unit tests for business logic, widget tests for UI components, and integration tests for full flows. Cover edge cases, error states, and happy paths. Follow the existing test patterns in the project.",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny"
+      }
+    },
+    "logic": {
+      "description": "Analyzes and designs business logic, architecture, and data flow",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "prompt": "You are a software architect. Analyze and design business logic, data flow, and architecture. Focus on: separation of concerns, clean architecture principles, state management patterns, data layer design, and service abstraction. Think through the problem before coding. Provide clear reasoning and multiple approaches when appropriate.",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny"
+      }
+    },
+    "refactor": {
+      "description": "Safely refactors code to improve structure, readability, and performance",
+      "mode": "subagent",
+      "temperature": 0.2,
+      "prompt": "You are a code refactoring specialist. Improve code structure, readability, and performance without changing external behavior. Follow SOLID principles, reduce duplication, simplify complex logic, improve naming, and extract reusable components. Ensure all refactoring preserves existing functionality.",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny"
+      }
+    },
+    "debug": {
+      "description": "Investigates and fixes bugs by analyzing logs, stack traces, and code paths",
+      "mode": "subagent",
+      "temperature": 0.1,
+      "prompt": "You are a debugger. Methodically investigate bugs by: reproducing the issue, analyzing error messages and stack traces, tracing code paths, checking data flow, and identifying root causes. Propose targeted fixes and verify they resolve the issue without introducing regressions.",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow"
+      }
+    },
+    "flutter-guru": {
+      "description": "Expert in Flutter/Dart development patterns, widgets, and performance optimization",
+      "mode": "subagent",
+      "temperature": 0.2,
+      "prompt": "You are a Flutter expert. Provide guidance on: widget composition, state management (Provider, Riverpod, BLoC), rendering performance, platform-specific code, asset management, navigation/routing, animations, and Flutter-specific best practices. Reference official Flutter documentation when relevant.",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny"
+      }
+    },
+    "docs-writer": {
+      "description": "Writes and maintains project documentation including API docs, README, and guides",
+      "mode": "subagent",
+      "temperature": 0.3,
+      "prompt": "You are a technical writer. Create clear, comprehensive documentation. Focus on: clear explanations, proper structure, code examples, user-friendly language, and consistent formatting. Document APIs, architecture decisions, setup instructions, and usage guides.",
+      "permission": {
+        "edit": "allow",
+        "bash": "deny"
+      }
+    }
+  },
+  "command": {
+    "test": {
+      "template": "Run the full test suite with `flutter test` and analyze any failures. Show the failing test output and suggest fixes.",
+      "description": "Run all tests and analyze failures",
+      "agent": "build"
+    },
+    "review": {
+      "template": "Perform a thorough code review on the staged/selected changes. Check for security, performance, and best practices.",
+      "description": "Review staged changes",
+      "agent": "code-review"
+    },
+    "lint": {
+      "template": "Run `dart analyze` and fix any issues found. Report what was fixed.",
+      "description": "Run dart analyzer and fix issues",
+      "agent": "build"
+    },
+    "build": {
+      "template": "Run `flutter build` for the current platform and fix any build errors.",
+      "description": "Build the project and fix errors",
+      "agent": "build"
+    }
+  }
+}
