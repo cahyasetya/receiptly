@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/index.dart';
 import '../services/google_sheets_service.dart';
 
@@ -47,6 +48,19 @@ class _SyncScreenState extends State<SyncScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Gagal login: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _openSpreadsheet() async {
+    final uri = Uri.parse('https://docs.google.com/spreadsheets/d/$_spreadsheetId');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak bisa membuka browser')),
         );
       }
     }
@@ -189,11 +203,7 @@ class _SyncScreenState extends State<SyncScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Spreadsheet ID: $_spreadsheetId')),
-                  );
-                },
+                onPressed: () => _openSpreadsheet(),
                 icon: const Icon(Icons.open_in_browser),
                 label: const Text('Buka di Browser'),
               ),
