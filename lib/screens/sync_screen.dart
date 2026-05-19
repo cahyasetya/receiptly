@@ -245,7 +245,7 @@ class _SyncScreenState extends State<SyncScreen> {
                       color: _lastSuccess == true ? Colors.green : Colors.red,
                     ),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(_status!, style: const TextStyle(fontSize: 13))),
+                    Expanded(child: Text(_status!, style: const TextStyle(fontSize: 13, color: Colors.black87))),
                   ],
                 ),
               ),
