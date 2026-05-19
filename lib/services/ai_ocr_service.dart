@@ -133,12 +133,12 @@ Available categories (pick the closest match for each item):
 ${categories.map((c) => '- $c').join('\n')}
 
 Rules:
-1. Extract EVERY item name listed on the receipt.
+1. Extract EVERY product item name listed on the receipt.
 2. "type" must be "itemized" or "summary".
 3. "price" must be a number (integer or float). Convert Indonesian format (e.g., "15.000" -> 15000).
 4. For "summary" type, set each item's price to 0 and use "total" for the grand total.
 5. "category" must be one of the available categories listed above.
-6. "total" is the grand total printed on the receipt. This includes all fees and taxes.
+6. CRITICAL: "total" is the GRAND TOTAL printed on the receipt — the final amount paid. This is NOT the sum of "items". "total" is its own field and already includes taxes, service fees, shipping, discounts, etc. Always read "total" from the receipt's final amount line, never calculate it from items. The sum of items may differ from total due to fees/discounts.
 7. Ignore headers, footers, dates, and "Thank You" messages.
 8. If the receipt is in Indonesian, keep the item names in Indonesian.
 9. Do NOT return markdown code blocks (like ```json). Return raw JSON only.
@@ -151,8 +151,8 @@ Rules:
     - Diskon / Discount / Potongan harga
     - Kembalian / Change due
     - Any other fee or charge that is not a physical product or service
-    These are part of the receipt total but should NOT appear as items.
-12. For "total", use the grand total AFTER all fees, taxes, and discounts are applied (the final amount paid).
+    These are NOT products — they are already accounted for in "total".
+12. "items" should ONLY contain actual products/goods purchased. The "total" field is independent and covers everything (fees, taxes, discounts). Do NOT create an item called "Total" or anything similar.
 ''';
 
       // Build request body

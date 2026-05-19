@@ -23,6 +23,7 @@ class _OCRScreenState extends State<OCRScreen> {
   late TextEditingController _ocrTextController;
 
   List<OCRItem> _items = [];
+  double _totalAmount = 0;
   String _fullOCRText = '';
   bool _isProcessing = true;
   String? _errorMessage;
@@ -48,6 +49,7 @@ class _OCRScreenState extends State<OCRScreen> {
       setState(() {
         _fullOCRText = result.fullText;
         _items = result.items;
+        _totalAmount = result.amount ?? 0;
         _ocrTextController.text = _fullOCRText;
         _isProcessing = false;
       });
@@ -74,6 +76,7 @@ class _OCRScreenState extends State<OCRScreen> {
           imagePath: widget.imagePath,
           ocrText: _fullOCRText,
           items: _items,
+          totalAmount: _totalAmount,
           repository: widget.repository,
           source: InputMode.ai,
         ),

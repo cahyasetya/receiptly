@@ -8,6 +8,7 @@ class CategorizeScreen extends StatefulWidget {
   final String? imagePath;
   final String ocrText;
   final List<OCRItem> items;
+  final double totalAmount;
   final ExpenseRepository repository;
   final InputMode source;
 
@@ -16,6 +17,7 @@ class CategorizeScreen extends StatefulWidget {
     this.imagePath,
     this.ocrText = '',
     this.items = const [],
+    this.totalAmount = 0,
     required this.repository,
     this.source = InputMode.ai,
   });
@@ -87,7 +89,7 @@ class _CategorizeScreenState extends State<CategorizeScreen> {
   Future<void> _saveExpense() async {
     setState(() => _isSaving = true);
     try {
-      final total = _expenseItems.fold<double>(0, (s, i) => s + i.price);
+    final total = widget.totalAmount > 0 ? widget.totalAmount : _expenseItems.fold<double>(0, (s, i) => s + i.price);
       final expense = Expense(
         imagePath: widget.imagePath ?? '',
         amount: total,
