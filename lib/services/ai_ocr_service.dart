@@ -146,16 +146,10 @@ Rules:
 11. Exclude these from "items" — they are NOT products:
     - Ongkos kirim / Shipping / Delivery fee
     - Biaya layanan / Service charge / Service fee
+    - SC / Service Charge
     - Biaya platform / Platform fee / Admin fee
     - Diskon / Discount / Potongan harga
-    - Pajak / Tax / PPN / PPnBM
-    - Kembalian / Change due
-11. IMPORTANT — Exclude these from "items" (they are NOT products):
-    - Pajak / Tax / PPN / PPnBM
-    - Ongkos kirim / Shipping fee / Delivery fee
-    - Biaya layanan / Service charge / Service fee
-    - Biaya platform / Platform fee / Admin fee
-    - Diskon / Discount / Potongan harga
+    - Pajak / Tax / PPN / PPnBM / PB1 / PB-1
     - Kembalian / Change due
     - Any other fee or charge that is not a physical product or service
     These are part of the receipt total but should NOT appear as items.
