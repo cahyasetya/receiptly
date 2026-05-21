@@ -90,7 +90,7 @@ class _OCRScreenState extends State<OCRScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final itemsTotal = _items.fold<double>(0, (sum, i) => sum + i.price);
+    final displayTotal = _totalAmount > 0 ? _totalAmount : _items.fold<double>(0, (sum, i) => sum + i.price);
 
     return Scaffold(
       appBar: AppBar(
@@ -164,7 +164,7 @@ class _OCRScreenState extends State<OCRScreen> {
                               locale: 'id',
                               symbol: 'Rp',
                               decimalDigits: 0,
-                            ).format(itemsTotal),
+                            ).format(displayTotal),
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
